@@ -504,7 +504,8 @@ app.post('/api/reset', async (_req, res) => {
 
 // ─── Start Server ──────────────────────────────────────────────────────────────
 
-const PORT = 3001;
-app.listen(PORT, () => {
-  console.log(`⚡ WattWise AI Backend running on port ${PORT}`);
+const PORT = Number(process.env.PORT) || 3001;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`WattWise AI Backend running on port ${PORT}`);
 });
