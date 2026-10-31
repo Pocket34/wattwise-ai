@@ -3,7 +3,13 @@
 
 import { ProviderInfo, CommonDevice, IntegrationMode } from '../types';
 
-const API_BASE = '/api/integrations';
+const ROOT_API =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? 'https://wattwise-ai-se66.onrender.com/api'
+    : 'http://localhost:3001/api');
+
+const API_BASE = `${ROOT_API.replace(/\/+$/, '')}/integrations`;
 
 export const integrationsApi = {
   /**

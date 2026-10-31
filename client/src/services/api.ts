@@ -15,7 +15,13 @@ import {
   SmartSavingState
 } from '../types';
 
-const API_BASE = 'http://localhost:3001/api';
+const RAW_API =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? 'https://wattwise-ai-se66.onrender.com/api'
+    : 'http://localhost:3001/api');
+
+export const API_BASE = RAW_API.replace(/\/+$/, '');
 
 export interface DashboardResponse {
   success: boolean;
@@ -46,6 +52,26 @@ export const api = {
       body: JSON.stringify(updates)
     });
     if (!res.ok) throw new Error('Failed to update appliance');
+    return res.json();
+  },
+
+  // Add new appliance
+  async addAppliance(appliance: Partial<Appliance>): Promise<{ success: boolean; appliance: Appliance }> {
+    const res = await fetch(`${API_BASE}/appliances`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(appliance)
+    });
+    if (!res.ok) throw new Error('Failed to create appliance');
+    return res.json();
+  },
+
+  // Delete appliance
+  async deleteAppliance(id: string): Promise<{ success: boolean; message: string; id: string }> {
+    const res = await fetch(`${API_BASE}/appliances/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete appliance');
     return res.json();
   },
 
@@ -228,6 +254,14 @@ export const api = {
       method: 'POST'
     });
     if (!res.ok) throw new Error('Failed to complete goal');
+    return res.json();
+  },
+
+  async deleteGoal(id: string): Promise<{ success: boolean; message: string; id: string }> {
+    const res = await fetch(`${API_BASE}/goals/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete goal');
     return res.json();
   },
 

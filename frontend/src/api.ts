@@ -6,7 +6,13 @@ import type {
   BillForecast, CarbonImpact, WhatIfParams, WhatIfResult, Settings
 } from './types';
 
-const BASE = '/api';
+const RAW_API =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.PROD
+    ? 'https://wattwise-ai-se66.onrender.com/api'
+    : 'http://localhost:3001/api');
+
+const BASE = RAW_API.replace(/\/+$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   try {
