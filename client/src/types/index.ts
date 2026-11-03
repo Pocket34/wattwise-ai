@@ -16,6 +16,7 @@ export interface Appliance {
   id: string;
   name: string;
   name_hi: string;
+  icon?: string;
   category: string;
   room: string;
   power_watts: number;
@@ -181,6 +182,8 @@ export interface Telemetry {
   roomContributions: { room: string; watts: number }[];
   categoryContributions: { category: string; watts: number }[];
   totalLoadWatts?: number;
+  projectedMonthlyKwh?: number;
+  projectedMonthlyBill?: number;
 }
 
 export interface Leak {

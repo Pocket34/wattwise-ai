@@ -28,6 +28,18 @@ export const SmartRulesView: React.FC = () => {
   const [newTriggerType, setNewTriggerType] = useState<string>('power_threshold');
   const [newThreshold, setNewThreshold] = useState<number>(3500);
   const [newActionType, setNewActionType] = useState<string>('shed_heavy_load');
+
+  const formatRuleTime = (ts?: string) => {
+    if (!ts) return 'Idle';
+    if (ts.includes('T')) {
+      try {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch {}
+    }
+    const parts = ts.split(' ');
+    return parts[1] || parts[0] || 'Today';
+  };
   const [newTargetApp, setNewTargetApp] = useState<string>('pump');
 
   // Toggle rule enabled/disabled
@@ -205,7 +217,7 @@ export const SmartRulesView: React.FC = () => {
               {/* Bottom Actions */}
               <div className="pt-4 mt-4 border-t border-white/5 flex items-center justify-between text-xs">
                 <span className="text-[10px] text-ivory-dark font-mono">
-                  {rule.last_triggered_at ? `Last run: ${rule.last_triggered_at.split(' ')[1] || 'Today'}` : 'Idle'}
+                  {rule.last_triggered_at ? `Last run: ${formatRuleTime(rule.last_triggered_at)}` : 'Idle'}
                 </span>
 
                 <div className="flex items-center gap-2">

@@ -45,7 +45,9 @@ export async function initDb(): Promise<Database> {
       name TEXT NOT NULL,
       icon TEXT,
       category TEXT,
+      room TEXT DEFAULT 'Living Room',
       power_watts REAL,
+      standby_watts REAL DEFAULT 10,
       is_on INTEGER DEFAULT 0,
       priority TEXT DEFAULT 'medium',
       schedule_start TEXT DEFAULT '',
@@ -54,6 +56,9 @@ export async function initDb(): Promise<Database> {
       created_at TEXT
     )
   `);
+
+  try { db.run("ALTER TABLE appliances ADD COLUMN room TEXT DEFAULT 'Living Room'"); } catch {}
+  try { db.run("ALTER TABLE appliances ADD COLUMN standby_watts REAL DEFAULT 10"); } catch {}
 
   db.run(`
     CREATE TABLE IF NOT EXISTS rules (
@@ -107,23 +112,23 @@ function seedData(): void {
 
   if (applianceCount === 0) {
     const appliances = [
-      { name: 'AC', power: 1500, on: 1, hours: 8, icon: '❄️', category: 'cooling', priority: 'high' },
-      { name: 'Refrigerator', power: 150, on: 1, hours: 24, icon: '🧊', category: 'kitchen', priority: 'high' },
-      { name: 'Washing Machine', power: 500, on: 0, hours: 1, icon: '👕', category: 'laundry', priority: 'medium' },
-      { name: 'TV', power: 120, on: 1, hours: 5, icon: '📺', category: 'entertainment', priority: 'low' },
-      { name: 'Fan', power: 75, on: 1, hours: 12, icon: '🌀', category: 'cooling', priority: 'medium' },
-      { name: 'Lights', power: 60, on: 1, hours: 8, icon: '💡', category: 'lighting', priority: 'medium' },
-      { name: 'Geyser', power: 2000, on: 0, hours: 0.5, icon: '🚿', category: 'heating', priority: 'medium' },
-      { name: 'Microwave', power: 1200, on: 0, hours: 0.3, icon: '🍕', category: 'kitchen', priority: 'low' },
-      { name: 'Laptop', power: 65, on: 1, hours: 8, icon: '💻', category: 'electronics', priority: 'medium' },
-      { name: 'Water Pump', power: 750, on: 0, hours: 1, icon: '💧', category: 'utility', priority: 'low' },
+      { name: 'AC', power: 1500, standby: 15, on: 1, hours: 8, icon: '❄️', category: 'cooling', room: 'Master Bedroom', priority: 'high' },
+      { name: 'Refrigerator', power: 150, standby: 10, on: 1, hours: 24, icon: '🧊', category: 'kitchen', room: 'Modular Kitchen', priority: 'high' },
+      { name: 'Washing Machine', power: 500, standby: 5, on: 0, hours: 1, icon: '👕', category: 'laundry', room: 'Bathroom', priority: 'medium' },
+      { name: 'TV', power: 120, standby: 25, on: 1, hours: 5, icon: '📺', category: 'entertainment', room: 'Living Room', priority: 'low' },
+      { name: 'Fan', power: 75, standby: 0, on: 1, hours: 12, icon: '🌀', category: 'cooling', room: 'Living Room', priority: 'medium' },
+      { name: 'Lights', power: 60, standby: 0, on: 1, hours: 8, icon: '💡', category: 'lighting', room: 'Living Room', priority: 'medium' },
+      { name: 'Geyser', power: 2000, standby: 5, on: 0, hours: 0.5, icon: '🚿', category: 'heating', room: 'Bathroom', priority: 'medium' },
+      { name: 'Microwave', power: 1200, standby: 8, on: 0, hours: 0.3, icon: '🍕', category: 'kitchen', room: 'Modular Kitchen', priority: 'low' },
+      { name: 'Laptop', power: 65, standby: 4, on: 1, hours: 8, icon: '💻', category: 'electronics', room: 'Home Office', priority: 'medium' },
+      { name: 'Water Pump', power: 750, standby: 0, on: 0, hours: 1, icon: '💧', category: 'utility', room: 'Bathroom', priority: 'low' },
     ];
 
     for (const a of appliances) {
       db.run(
-        `INSERT INTO appliances (id, name, icon, category, power_watts, is_on, priority, schedule_start, schedule_end, daily_usage_hours, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)`,
-        [crypto.randomUUID(), a.name, a.icon, a.category, a.power, a.on, a.priority, a.hours, now]
+        `INSERT INTO appliances (id, name, icon, category, room, power_watts, standby_watts, is_on, priority, schedule_start, schedule_end, daily_usage_hours, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)`,
+        [crypto.randomUUID(), a.name, a.icon, a.category, a.room, a.power, a.standby, a.on, a.priority, a.hours, now]
       );
     }
   }

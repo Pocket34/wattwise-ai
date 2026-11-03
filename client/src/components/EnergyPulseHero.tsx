@@ -152,10 +152,10 @@ export const EnergyPulseHero: React.FC = () => {
                   }}
                 >
                   <span className="text-amber-300 font-bold truncate max-w-[80px]">
-                    {app.name.split(' ')[0]}
+                    {(app.name || 'Device').split(' ')[0]}
                   </span>
                   <span className="text-lime-bright text-[9px] font-bold">
-                    {app.power_watts}W
+                    {app.power_watts || 0}W
                   </span>
                 </div>
               );

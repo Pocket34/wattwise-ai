@@ -26,8 +26,9 @@ export const EnergyGoalsView: React.FC = () => {
   const [newTargetVal, setNewTargetVal] = useState<number>(15);
   const [newUnit, setNewUnit] = useState<string>('%');
 
-  const activeGoals = goals.filter(g => g.status === 'active');
-  const completedGoals = goals.filter(g => g.status === 'completed');
+  const safeGoals = goals || [];
+  const activeGoals = safeGoals.filter(g => g.status === 'active');
+  const completedGoals = safeGoals.filter(g => g.status === 'completed');
 
   // Complete goal with celebration
   const handleCompleteGoal = async (goal: Goal) => {
@@ -119,7 +120,9 @@ export const EnergyGoalsView: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activeGoals.map((goal) => {
-            const pct = Math.min(100, Math.round((goal.current_value / goal.target_value) * 100));
+            const target = Number(goal.target_value) || 1;
+            const current = Number(goal.current_value) || 0;
+            const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
 
             return (
               <div

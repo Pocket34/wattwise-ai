@@ -17,7 +17,10 @@ import {
   Home,
   Radio,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  Trash2,
+  History
 } from 'lucide-react';
 import { soundManager } from '../utils/SoundManager';
 import { HomeEnergyMap } from '../components/HomeEnergyMap';
@@ -27,6 +30,8 @@ export const AppliancesView: React.FC = () => {
     appliances,
     toggleAppliance,
     updateApplianceDetails,
+    addAppliance,
+    deleteAppliance,
     setApplianceSpeed,
     setApplianceBrightness,
     setApplianceTemp,
@@ -39,6 +44,15 @@ export const AppliancesView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [selectedAppliance, setSelectedAppliance] = useState<Appliance | null>(null);
 
+  // Add Appliance state
+  const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
+  const [newAppName, setNewAppName] = useState<string>('');
+  const [newAppRoom, setNewAppRoom] = useState<string>('Living Room');
+  const [newAppWatts, setNewAppWatts] = useState<number>(100);
+  const [newAppHours, setNewAppHours] = useState<number>(4);
+  const [newAppCategory, setNewAppCategory] = useState<string>('general');
+  const [newAppEfficiency, setNewAppEfficiency] = useState<string>('5-Star BEE');
+
   // Form states for the detail modal
   const [editWatts, setEditWatts] = useState<number>(100);
   const [editHours, setEditHours] = useState<number>(4);
@@ -47,6 +61,24 @@ export const AppliancesView: React.FC = () => {
   const [editSchedEnd, setEditSchedEnd] = useState<string>('00:00');
   const [editSchedEnabled, setEditSchedEnabled] = useState<boolean>(false);
   const [editPriority, setEditPriority] = useState<boolean>(false);
+
+  const handleCreateAppliance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAppName.trim()) return;
+
+    await addAppliance({
+      name: newAppName.trim(),
+      name_hi: newAppName.trim(),
+      room: newAppRoom,
+      power_watts: newAppWatts,
+      daily_hours: newAppHours,
+      category: newAppCategory,
+      efficiency_rating: newAppEfficiency
+    });
+
+    setIsAddOpen(false);
+    setNewAppName('');
+  };
 
   const openApplianceModal = (app: Appliance) => {
     setSelectedAppliance(app);
@@ -170,6 +202,14 @@ export const AppliancesView: React.FC = () => {
           <div className="text-xs font-mono text-ivory-dark px-3 py-2 rounded-xl bg-charcoal-900 border border-white/10">
             {appliances.filter((a) => a.is_on === 1).length} / {appliances.length} {lang === 'hi' ? 'सक्रिय' : 'Active'}
           </div>
+
+          <button
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-charcoal-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95"
+          >
+            <Plus className="w-4 h-4 text-charcoal-950" />
+            <span>{lang === 'hi' ? 'उपकरण जोड़ें' : 'Add Appliance'}</span>
+          </button>
         </div>
       </div>
 
@@ -507,22 +547,202 @@ export const AppliancesView: React.FC = () => {
               </div>
             </div>
 
-            {/* Save Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+            {/* Appliance Usage History */}
+            <div className="p-3.5 rounded-2xl bg-charcoal-950/70 border border-white/5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-ivory flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-amber-400" />
+                  <span>7-Day Estimated Usage History</span>
+                </span>
+                <span className="text-[10px] font-mono text-lime-bright">
+                  ~{((selectedAppliance.power_watts * selectedAppliance.daily_hours * 7) / 1000).toFixed(1)} kWh total
+                </span>
+              </div>
+              <div className="flex items-end gap-1.5 h-12 pt-1">
+                {[65, 80, 70, 90, 85, 95, 100].map((pct, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                    <div
+                      style={{ height: `${pct}%` }}
+                      className="w-full rounded bg-amber-500/40 hover:bg-amber-400 transition"
+                    />
+                    <span className="text-[9px] text-ivory-dark font-mono">
+                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Save & Remove Buttons */}
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/10">
               <button
-                onClick={() => setSelectedAppliance(null)}
-                className="px-4 py-2.5 rounded-xl bg-charcoal-850 hover:bg-charcoal-800 text-xs text-ivory transition"
+                type="button"
+                onClick={async () => {
+                  if (confirm(`Remove "${selectedAppliance.name}" from your smart home?`)) {
+                    await deleteAppliance(selectedAppliance.id);
+                    setSelectedAppliance(null);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-semibold transition"
               >
-                Cancel
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove</span>
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAppliance(null)}
+                  className="px-4 py-2.5 rounded-xl bg-charcoal-850 hover:bg-charcoal-800 text-xs text-ivory transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveModal}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-charcoal-950 font-bold text-xs shadow-md transition active:scale-95"
+                >
+                  <Check className="w-4 h-4 text-charcoal-950" />
+                  <span>{lang === 'hi' ? 'परिवर्तन सुरक्षित करें' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Appliance Modal */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-lg p-6 sm:p-7 rounded-3xl bg-charcoal-900 border border-amber-500/35 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ivory">
+                    {lang === 'hi' ? 'नया स्मार्ट उपकरण जोड़ें' : 'Add New Appliance'}
+                  </h3>
+                  <p className="text-xs text-ivory-dark font-hindi">
+                    {lang === 'hi' ? 'अपने स्मार्ट होम ग्रिड में नया डिवाइस पंजीकृत करें' : 'Register a new smart device to your home energy profile'}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={handleSaveModal}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-charcoal-950 font-bold text-xs shadow-md transition active:scale-95"
+                onClick={() => setIsAddOpen(false)}
+                className="p-1.5 rounded-xl bg-charcoal-800 text-ivory hover:bg-charcoal-700 transition"
               >
-                <Check className="w-4 h-4 text-charcoal-950" />
-                <span>{lang === 'hi' ? 'परिवर्तन सुरक्षित करें' : 'Save Changes'}</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
+
+            <form onSubmit={handleCreateAppliance} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-ivory-dark font-semibold mb-1">Appliance Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Smart Air Purifier, Home Server, Dishwasher"
+                  value={newAppName}
+                  onChange={(e) => setNewAppName(e.target.value)}
+                  className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-ivory-dark font-semibold mb-1">Room</label>
+                  <select
+                    value={newAppRoom}
+                    onChange={(e) => setNewAppRoom(e.target.value)}
+                    className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none"
+                  >
+                    <option value="Living Room">Living Room</option>
+                    <option value="Master Bedroom">Master Bedroom</option>
+                    <option value="Modular Kitchen">Modular Kitchen</option>
+                    <option value="Master Bathroom">Master Bathroom</option>
+                    <option value="Home Office">Home Office</option>
+                    <option value="Utility Balcony">Utility Balcony</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-ivory-dark font-semibold mb-1">Category</label>
+                  <select
+                    value={newAppCategory}
+                    onChange={(e) => setNewAppCategory(e.target.value)}
+                    className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none"
+                  >
+                    <option value="HVAC">Climate / HVAC</option>
+                    <option value="Kitchen">Kitchen Appliances</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Workstation">Workstation / Compute</option>
+                    <option value="Lighting">Lighting</option>
+                    <option value="general">General Smart Plug</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-ivory-dark font-semibold mb-1">Power Draw (Watts)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={newAppWatts}
+                    onChange={(e) => setNewAppWatts(parseInt(e.target.value) || 0)}
+                    className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-ivory-dark font-semibold mb-1">Daily Usage (Hours)</label>
+                  <input
+                    type="number"
+                    min="0.5"
+                    max="24"
+                    step="0.5"
+                    value={newAppHours}
+                    onChange={(e) => setNewAppHours(parseFloat(e.target.value) || 1)}
+                    className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-ivory-dark font-semibold mb-1">Efficiency Rating</label>
+                <select
+                  value={newAppEfficiency}
+                  onChange={(e) => setNewAppEfficiency(e.target.value)}
+                  className="w-full bg-charcoal-850 border border-white/10 rounded-xl px-3 py-2 text-ivory focus:border-amber-400 outline-none"
+                >
+                  <option value="5-Star BEE Inverter">5-Star BEE Inverter</option>
+                  <option value="4-Star BEE High Efficiency">4-Star BEE High Efficiency</option>
+                  <option value="3-Star BEE Standard">3-Star BEE Standard</option>
+                  <option value="BLDC High Efficiency">BLDC High Efficiency</option>
+                  <option value="Energy Star Certified">Energy Star Certified</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-charcoal-850 hover:bg-charcoal-800 text-ivory text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-charcoal-950 font-bold text-xs shadow-md shadow-amber-500/25"
+                >
+                  <Plus className="w-4 h-4 text-charcoal-950" />
+                  <span>Register Appliance</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

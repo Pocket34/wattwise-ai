@@ -89,11 +89,12 @@ export const HomeEnergyMap: React.FC = () => {
 
   const [selectedApplianceId, setSelectedApplianceId] = useState<string | null>(null);
 
-  const selectedAppliance = appliances.find((a) => a.id === selectedApplianceId) || null;
+  const safeAppliances = appliances || [];
+  const selectedAppliance = safeAppliances.find((a) => a.id === selectedApplianceId) || null;
 
   // Group appliances by room
   const getRoomAppliances = (roomName: string) => {
-    return appliances.filter((a) => a.room.toLowerCase().includes(roomName.toLowerCase()) ||
+    return safeAppliances.filter((a) => (a.room || '').toLowerCase().includes((roomName || '').toLowerCase()) ||
       (roomName === 'Utility' && (a.id === 'washer' || a.id === 'pump')) ||
       (roomName === 'Living Room' && (a.id === 'tv' || a.id === 'lights')) ||
       (roomName === 'Bedroom' && (a.id === 'ac' || a.id === 'fan' || a.id === 'laptop')) ||
@@ -104,7 +105,7 @@ export const HomeEnergyMap: React.FC = () => {
 
   const getRoomTotalWatts = (roomName: string) => {
     const list = getRoomAppliances(roomName);
-    return list.reduce((acc, cur) => acc + (cur.is_on ? cur.power_watts : (cur.vampire_active ? (cur.standby_watts || 5) : 0)), 0);
+    return list.reduce((acc, cur) => acc + (cur.is_on ? (Number(cur.power_watts) || 0) : (cur.vampire_active ? (Number(cur.standby_watts) || 5) : 0)), 0);
   };
 
   const getAuraColor = (watts: number) => {
@@ -276,7 +277,7 @@ export const HomeEnergyMap: React.FC = () => {
                               {app.id === 'ac' && <span>{app.temp_setpoint || 24}°C</span>}
                               {app.id === 'fan' && <span>Speed {app.device_speed || 4}/5</span>}
                               {app.id === 'lights' && <span>{app.brightness || 85}% brightness</span>}
-                              <span>{app.efficiency_rating.split(' ')[0]}</span>
+                              <span>{(app.efficiency_rating || '5 Star').split(' ')[0]}</span>
                             </div>
                           </div>
                         </div>
@@ -483,13 +484,13 @@ export const HomeEnergyMap: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-ivory-dark">Daily Energy:</span>
                 <span className="text-ivory font-bold">
-                  {((selectedAppliance.is_on ? selectedAppliance.power_watts * selectedAppliance.daily_hours : 0) / 1000).toFixed(2)} kWh
+                  {((selectedAppliance.is_on ? selectedAppliance.power_watts * (selectedAppliance.daily_hours ?? (selectedAppliance as any).daily_usage_hours ?? 4) : 0) / 1000).toFixed(2)} kWh
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ivory-dark">Daily Cost:</span>
                 <span className="text-amber-300 font-bold">
-                  ₹{Math.round(((selectedAppliance.is_on ? selectedAppliance.power_watts * selectedAppliance.daily_hours : 0) / 1000) * tariffRate)}
+                  ₹{Math.round(((selectedAppliance.is_on ? selectedAppliance.power_watts * (selectedAppliance.daily_hours ?? (selectedAppliance as any).daily_usage_hours ?? 4) : 0) / 1000) * tariffRate)}
                 </span>
               </div>
               <div className="flex justify-between">

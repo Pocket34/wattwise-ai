@@ -47,6 +47,9 @@ interface EnergyContextType {
   refreshStatus: () => Promise<void>;
   toggleAppliance: (id: string, state?: boolean) => Promise<void>;
   updateApplianceDetails: (id: string, updates: Partial<Appliance>) => Promise<void>;
+  addAppliance: (app: Partial<Appliance>) => Promise<void>;
+  deleteAppliance: (id: string) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
   setApplianceSpeed: (id: string, speed: number) => Promise<void>;
   setApplianceBrightness: (id: string, brightness: number) => Promise<void>;
   setApplianceTemp: (id: string, temp: number) => Promise<void>;
@@ -75,12 +78,64 @@ interface EnergyContextType {
   refreshProviders: () => Promise<void>;
 }
 
+const DEFAULT_TELEMETRY: Telemetry = {
+  currentWatts: 1840,
+  baselineWatts: 460,
+  standbyVampireWatts: 42,
+  activeCount: 5,
+  todayKwh: 14.2,
+  todayCost: 113.6,
+  effectiveTariff: 8.0,
+  efficiencyScore: 82,
+  potentialSavingsTodayKwh: 3.9,
+  potentialSavingsTodayCost: 31.8,
+  co2TodayKg: 11.6,
+  co2AvoidedMonthKg: 84.5,
+  equivalentTrees: 4.2,
+  equivalentEvKm: 540,
+  projectedMonthlyBill: 3408,
+  projectedMonthlyKwh: 426,
+  roomContributions: [
+    { room: 'Master Bedroom', watts: 1450 },
+    { room: 'Living Room', watts: 232 },
+    { room: 'Modular Kitchen', watts: 160 },
+    { room: 'Home Office', watts: 85 }
+  ],
+  categoryContributions: [
+    { category: 'climate', watts: 1450 },
+    { category: 'entertainment', watts: 140 },
+    { category: 'kitchen', watts: 160 },
+    { category: 'electronics', watts: 85 }
+  ],
+  hourlyGraph: Array.from({ length: 24 }, (_, i) => ({
+    hour: `${String(i).padStart(2, '0')}:00`,
+    hourNum: i,
+    watts: i >= 18 && i <= 22 ? 2200 : i >= 9 && i <= 17 ? 1400 : 600,
+    costRate: i >= 18 && i <= 22 ? 17.6 : 11.2,
+    isPeak: i >= 18 && i <= 22,
+    isCurrent: i === new Date().getHours()
+  }))
+};
+
+const DEFAULT_APPLIANCES: Appliance[] = [
+  { id: 'app-ac', name: 'Dual-Inverter AC', name_hi: 'ड्यूल इन्वर्टर एसी', category: 'climate', room: 'Master Bedroom', power_watts: 1450, baseline_watts: 1450, standby_watts: 12, is_on: 1, daily_hours: 6, is_priority: 1, schedule_start: '22:00', schedule_end: '06:00', schedule_enabled: 1, efficiency_rating: '5 Star', temp_setpoint: 24, vampire_active: 0, icon: '❄️' },
+  { id: 'app-fridge', name: 'Smart Inverter Refrigerator', name_hi: 'स्मार्ट इन्वर्टर फ्रिज', category: 'kitchen', room: 'Modular Kitchen', power_watts: 160, baseline_watts: 160, standby_watts: 8, is_on: 1, daily_hours: 24, is_priority: 1, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '5 Star', temp_setpoint: 4, vampire_active: 0, icon: '🧊' },
+  { id: 'app-tv', name: 'OLED Smart TV & Soundbar', name_hi: 'ओएलईडी स्मार्ट टीवी', category: 'entertainment', room: 'Living Room', power_watts: 140, baseline_watts: 140, standby_watts: 28, is_on: 1, daily_hours: 5, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '4 Star', temp_setpoint: 0, vampire_active: 1, icon: '📺' },
+  { id: 'app-geyser', name: 'Thermal Storage Geyser', name_hi: 'थर्मल स्टोरेज गीजर', category: 'heating', room: 'Bathroom', power_watts: 2000, baseline_watts: 2000, standby_watts: 5, is_on: 0, daily_hours: 1, is_priority: 0, schedule_start: '06:30', schedule_end: '07:30', schedule_enabled: 1, efficiency_rating: '4 Star', temp_setpoint: 55, vampire_active: 0, icon: '🚿' },
+  { id: 'app-fan', name: 'BLDC Ceiling Fan', name_hi: 'बीएलडीसी सीलिंग फैन', category: 'cooling', room: 'Living Room', power_watts: 32, baseline_watts: 32, standby_watts: 2, is_on: 1, daily_hours: 14, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '5 Star', temp_setpoint: 0, vampire_active: 0, icon: '🌀' },
+  { id: 'app-wash', name: 'Front Load Washing Machine', name_hi: 'वॉशिंग मशीन', category: 'utility', room: 'Bathroom', power_watts: 450, baseline_watts: 450, standby_watts: 4, is_on: 0, daily_hours: 1, is_priority: 0, schedule_start: '14:00', schedule_end: '15:00', schedule_enabled: 1, efficiency_rating: '5 Star', temp_setpoint: 0, vampire_active: 0, icon: '👕' },
+  { id: 'app-lights', name: 'Ambient LED Smart Lights', name_hi: 'स्मार्ट एलईडी लाइट्स', category: 'lighting', room: 'Living Room', power_watts: 55, baseline_watts: 55, standby_watts: 2, is_on: 1, daily_hours: 8, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '5 Star', temp_setpoint: 0, vampire_active: 0, icon: '💡' },
+  { id: 'app-pump', name: 'Submersible Water Pump', name_hi: 'पानी का पंप', category: 'utility', room: 'Bathroom', power_watts: 750, baseline_watts: 750, standby_watts: 0, is_on: 0, daily_hours: 1, is_priority: 0, schedule_start: '06:00', schedule_end: '07:00', schedule_enabled: 1, efficiency_rating: '4 Star', temp_setpoint: 0, vampire_active: 0, icon: '💧' },
+  { id: 'app-micro', name: 'Convection Microwave', name_hi: 'माइक्रोवेव', category: 'kitchen', room: 'Modular Kitchen', power_watts: 1200, baseline_watts: 1200, standby_watts: 6, is_on: 0, daily_hours: 0.5, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '4 Star', temp_setpoint: 0, vampire_active: 0, icon: '🍕' },
+  { id: 'app-desk', name: 'Workstation Setup', name_hi: 'वर्कस्टेशन सेटअप', category: 'electronics', room: 'Home Office', power_watts: 85, baseline_watts: 85, standby_watts: 10, is_on: 1, daily_hours: 8, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '5 Star', temp_setpoint: 0, vampire_active: 0, icon: '💻' }
+];
+
 const EnergyContext = createContext<EnergyContextType | null>(null);
 
 export const EnergyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [navSection, setNavSectionState] = useState<NavSection>('home');
-  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
-  const [appliances, setAppliances] = useState<Appliance[]>([]);
+  const [telemetry, setTelemetry] = useState<Telemetry | null>(DEFAULT_TELEMETRY);
+  const [appliances, setAppliances] = useState<Appliance[]>(DEFAULT_APPLIANCES);
   const [leaks, setLeaks] = useState<Leak[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -152,33 +207,34 @@ export const EnergyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const applyStatusResponse = (data: DashboardResponse) => {
-    setTelemetry(data.telemetry);
-    setAppliances(data.appliances);
-    setLeaks(data.leaks);
-    setRules(data.rules);
-    setGoals(data.goals);
-    setInsights(data.insights);
-    setSettings(data.settings);
-    setRecentActivity(data.recentActivity);
+    if (data.telemetry) setTelemetry(data.telemetry);
+    if (data.appliances && data.appliances.length > 0) setAppliances(data.appliances);
+    if (data.leaks) setLeaks(data.leaks);
+    if (data.rules) setRules(data.rules);
+    if (data.goals) setGoals(data.goals);
+    if (data.insights) setInsights(data.insights);
+    if (data.settings) setSettings(data.settings);
+    if (data.recentActivity) setRecentActivity(data.recentActivity);
 
     if (data.smartSavingState) {
       setSmartSavingState(data.smartSavingState);
     }
 
-    // Sync sound and voice manager states with persisted settings
-    const soundOn = data.settings.sound_enabled !== 'false';
-    const voiceOn = data.settings.voice_enabled !== 'false';
-    soundManager.setEnabled(soundOn);
-    voiceAssistant.setEnabled(voiceOn);
-    voiceAssistant.setLanguage(data.settings.language === 'en' ? 'en' : 'hi');
+    if (data.settings) {
+      const soundOn = data.settings.sound_enabled !== 'false';
+      const voiceOn = data.settings.voice_enabled !== 'false';
+      soundManager.setEnabled(soundOn);
+      voiceAssistant.setEnabled(voiceOn);
+      voiceAssistant.setLanguage(data.settings.language === 'en' ? 'en' : 'hi');
 
-    if (data.settings.integration_mode) {
-      setIntegrationModeState(data.settings.integration_mode as IntegrationMode);
-    }
+      if (data.settings.integration_mode) {
+        setIntegrationModeState(data.settings.integration_mode as IntegrationMode);
+      }
 
-    // First time welcome check
-    if (data.settings.has_seen_welcome !== 'true') {
-      setIsWelcomeOpen(true);
+      // First time welcome check
+      if (data.settings.has_seen_welcome !== 'true') {
+        setIsWelcomeOpen(true);
+      }
     }
   };
 
@@ -336,6 +392,39 @@ export const EnergyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const addAppliance = async (app: Partial<Appliance>) => {
+    soundManager.playToggleClick(true);
+    try {
+      await api.addAppliance(app);
+      await refreshStatus();
+      showNotification('success', 'Appliance Added', `${app.name} has been added to your smart home.`);
+    } catch (e) {
+      showNotification('alert', 'Error', 'Failed to add appliance');
+    }
+  };
+
+  const deleteAppliance = async (id: string) => {
+    soundManager.playToggleClick(false);
+    try {
+      await api.deleteAppliance(id);
+      await refreshStatus();
+      showNotification('info', 'Appliance Removed', 'Appliance was successfully deleted.');
+    } catch (e) {
+      showNotification('alert', 'Error', 'Failed to delete appliance');
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    soundManager.playToggleClick(false);
+    try {
+      await api.deleteGoal(id);
+      await refreshStatus();
+      showNotification('info', 'Goal Removed', 'Energy goal has been removed.');
+    } catch (e) {
+      showNotification('alert', 'Error', 'Failed to delete goal');
+    }
+  };
+
   // Fix leak action
   const fixLeak = async (id: string) => {
     soundManager.playSuccessChime();
@@ -471,6 +560,9 @@ export const EnergyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshStatus,
         toggleAppliance,
         updateApplianceDetails,
+        addAppliance,
+        deleteAppliance,
+        deleteGoal,
         setApplianceSpeed,
         setApplianceBrightness,
         setApplianceTemp,

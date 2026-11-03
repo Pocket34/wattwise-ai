@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { EnergyProvider, useEnergy } from './context/EnergyContext';
+import { NavSection } from './types';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -18,43 +20,62 @@ import { CarbonImpactView } from './views/CarbonImpactView';
 import { EnergyGoalsView } from './views/EnergyGoalsView';
 import { InsightsView } from './views/InsightsView';
 import { SettingsView } from './views/SettingsView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
-const DashboardContent: React.FC = () => {
-  const { navSection, notification, clearNotification, loading, error } = useEnergy();
-  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+// Route path mappings
+const SECTION_TO_PATH: Record<NavSection, string> = {
+  home: '/',
+  pulse: '/pulse',
+  appliances: '/appliances',
+  bridge: '/bridge',
+  leaks: '/leaks',
+  'what-if': '/what-if',
+  rules: '/rules',
+  forecast: '/forecast',
+  carbon: '/carbon',
+  goals: '/goals',
+  insights: '/insights',
+  settings: '/settings'
+};
 
-  const renderActiveView = () => {
-    switch (navSection) {
-      case 'home':
-        return <HomeView />;
-      case 'pulse':
-        return <EnergyPulseView />;
-      case 'appliances':
-        return <AppliancesView />;
-      case 'bridge':
-        return <SmartHomeBridgeView />;
-      case 'leaks':
-        return <LeakDetectiveView />;
-      case 'what-if':
-        return <WhatIfLabView />;
-      case 'rules':
-        return <SmartRulesView />;
-      case 'forecast':
-        return <BillForecastView />;
-      case 'carbon':
-        return <CarbonImpactView />;
-      case 'goals':
-        return <EnergyGoalsView />;
-      case 'insights':
-        return <InsightsView />;
-      case 'settings':
-        return <SettingsView />;
-      default:
-        return <HomeView />;
+const PATH_TO_SECTION: Record<string, NavSection> = {
+  '/': 'home',
+  '/home': 'home',
+  '/pulse': 'pulse',
+  '/appliances': 'appliances',
+  '/bridge': 'bridge',
+  '/leaks': 'leaks',
+  '/what-if': 'what-if',
+  '/rules': 'rules',
+  '/forecast': 'forecast',
+  '/carbon': 'carbon',
+  '/goals': 'goals',
+  '/insights': 'insights',
+  '/settings': 'settings'
+};
+
+const DashboardContent: React.FC = () => {
+  const { navSection, setNavSection, notification, clearNotification, error } = useEnergy();
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Keep route pathname and navSection synchronized
+  useEffect(() => {
+    const matchedSection = PATH_TO_SECTION[location.pathname];
+    if (matchedSection && matchedSection !== navSection) {
+      setNavSection(matchedSection);
     }
-  };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const targetPath = SECTION_TO_PATH[navSection];
+    if (targetPath && location.pathname !== targetPath && !(targetPath === '/' && location.pathname === '/home')) {
+      navigate(targetPath);
+    }
+  }, [navSection]);
 
   return (
     <div className="min-h-screen bg-charcoal-950 text-ivory flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
@@ -72,7 +93,25 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
-          {renderActiveView()}
+          {/* Declarative React Router Routes for all 12 views with ErrorBoundary protection */}
+          <ErrorBoundary sectionName="WattWise Intelligence View">
+            <Routes>
+              <Route path="/" element={<ErrorBoundary sectionName="Home Dashboard"><HomeView /></ErrorBoundary>} />
+              <Route path="/home" element={<ErrorBoundary sectionName="Home Dashboard"><HomeView /></ErrorBoundary>} />
+              <Route path="/pulse" element={<ErrorBoundary sectionName="Energy Pulse"><EnergyPulseView /></ErrorBoundary>} />
+              <Route path="/appliances" element={<ErrorBoundary sectionName="Appliances Fleet"><AppliancesView /></ErrorBoundary>} />
+              <Route path="/bridge" element={<ErrorBoundary sectionName="Smart Home Bridge"><SmartHomeBridgeView /></ErrorBoundary>} />
+              <Route path="/leaks" element={<ErrorBoundary sectionName="Leak Detective"><LeakDetectiveView /></ErrorBoundary>} />
+              <Route path="/what-if" element={<ErrorBoundary sectionName="What-If Simulation Lab"><WhatIfLabView /></ErrorBoundary>} />
+              <Route path="/rules" element={<ErrorBoundary sectionName="Smart Rules Automation"><SmartRulesView /></ErrorBoundary>} />
+              <Route path="/forecast" element={<ErrorBoundary sectionName="Bill Forecast"><BillForecastView /></ErrorBoundary>} />
+              <Route path="/carbon" element={<ErrorBoundary sectionName="Carbon Impact"><CarbonImpactView /></ErrorBoundary>} />
+              <Route path="/goals" element={<ErrorBoundary sectionName="Energy Goals"><EnergyGoalsView /></ErrorBoundary>} />
+              <Route path="/insights" element={<ErrorBoundary sectionName="Energy Insights"><InsightsView /></ErrorBoundary>} />
+              <Route path="/settings" element={<ErrorBoundary sectionName="System Settings"><SettingsView /></ErrorBoundary>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -109,8 +148,12 @@ const DashboardContent: React.FC = () => {
 
 export default function App() {
   return (
-    <EnergyProvider>
-      <DashboardContent />
-    </EnergyProvider>
+    <ErrorBoundary sectionName="WattWise Application Shell">
+      <BrowserRouter>
+        <EnergyProvider>
+          <DashboardContent />
+        </EnergyProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

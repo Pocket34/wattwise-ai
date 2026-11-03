@@ -15,9 +15,27 @@ import {
   Sparkles
 } from 'lucide-react';
 
+const DEFAULT_FORECAST: ForecastData = {
+  currentUsageKwhToday: 17.5,
+  projectedMonthlyKwh: 525,
+  projectedBill: 3955,
+  previousMonthKwh: 540,
+  previousMonthBill: 4200,
+  optimizedMonthlyKwh: 380,
+  optimizedBill: 2772,
+  potentialSavings: 1183,
+  tariffRate: 8.0,
+  tariffModel: 'slab',
+  slabs: [
+    { name: 'Lifeline Tier (0-100 kWh)', rate: '₹4.50', limit: 100, consumed: 100, cost: 450 },
+    { name: 'Standard Tier (101-300 kWh)', rate: '₹7.20', limit: 300, consumed: 200, cost: 1440 },
+    { name: 'Peak Surcharge (>300 kWh)', rate: '₹9.80', limit: '300+', consumed: 225, cost: 2065 }
+  ]
+};
+
 export const BillForecastView: React.FC = () => {
   const { lang, telemetry, settings, showNotification, refreshStatus } = useEnergy();
-  const [forecast, setForecast] = useState<ForecastData | null>(null);
+  const [forecast, setForecast] = useState<ForecastData>(DEFAULT_FORECAST);
   const [tariffRate, setTariffRate] = useState<number>(8.0);
   const [tariffModel, setTariffModel] = useState<'slab' | 'flat'>('slab');
 
@@ -170,21 +188,21 @@ export const BillForecastView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2">
-          {forecast?.slabs.map((slab, idx) => (
-            <div key={slab.name} className="p-4 rounded-2xl bg-charcoal-900/80 border border-white/5 space-y-2">
+          {(forecast?.slabs || []).map((slab, idx) => (
+            <div key={slab.name || idx} className="p-4 rounded-2xl bg-charcoal-900/80 border border-white/5 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-ivory">{slab.name.split(' (')[0]}</span>
+                <span className="font-bold text-ivory">{(slab?.name || 'Tier').split(' (')[0]}</span>
                 <span className="text-amber-400 font-mono text-[11px]">{slab.rate}</span>
               </div>
               <div className="flex items-baseline justify-between font-mono">
-                <span className="text-xl font-black text-ivory">{Math.round(slab.consumed)} kWh</span>
-                <span className="text-xs text-lime-bright font-bold">₹{Math.round(slab.cost)}</span>
+                <span className="text-xl font-black text-ivory">{Math.round(slab.consumed || 0)} kWh</span>
+                <span className="text-xs text-lime-bright font-bold">₹{Math.round(slab.cost || 0)}</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-charcoal-800 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-amber-500 to-copper-500 rounded-full"
                   style={{
-                    width: `${Math.min(100, (slab.consumed / (typeof slab.limit === 'number' ? slab.limit : 100)) * 100)}%`
+                    width: `${Math.min(100, ((slab.consumed || 0) / (typeof slab.limit === 'number' ? slab.limit : 100)) * 100)}%`
                   }}
                 />
               </div>

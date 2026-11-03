@@ -19,11 +19,12 @@ export const LeakDetectiveView: React.FC = () => {
   const { leaks, fixLeak, ignoreLeak, lang, telemetry } = useEnergy();
   const [investigatingLeak, setInvestigatingLeak] = useState<Leak | null>(null);
 
-  const activeLeaks = leaks.filter(l => l.status === 'active');
-  const resolvedLeaks = leaks.filter(l => l.status === 'fixed');
+  const safeLeaks = leaks || [];
+  const activeLeaks = safeLeaks.filter(l => l.status === 'active');
+  const resolvedLeaks = safeLeaks.filter(l => l.status === 'fixed');
 
-  const totalWasteKwh = activeLeaks.reduce((acc, l) => acc + l.waste_kwh_daily, 0);
-  const totalWasteCost = activeLeaks.reduce((acc, l) => acc + l.waste_cost_daily, 0);
+  const totalWasteKwh = activeLeaks.reduce((acc, l) => acc + (Number(l.waste_kwh_daily) || 0), 0);
+  const totalWasteCost = activeLeaks.reduce((acc, l) => acc + (Number(l.waste_cost_daily) || 0), 0);
 
   return (
     <div className="space-y-8 animate-fade-in">

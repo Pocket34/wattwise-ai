@@ -14,22 +14,34 @@ import {
   Share2
 } from 'lucide-react';
 
+const DEFAULT_CARBON: CarbonData = {
+  co2SavedTodayKg: 2.8,
+  co2SavedMonthKg: 84.5,
+  treesEquivalent: 4.2,
+  evKmEquivalent: 540,
+  currentDailyCo2Kg: 11.6,
+  impactStory: 'By optimizing your dual-inverter AC setpoint and eliminating standby vampire draw, your home is on track to avoid 84.5 kg of CO₂ emissions this month.',
+  impactStoryHi: 'अपने एसी को 24°C पर चलाकर और वैम्पायर बिजली बंद करके, आपका घर इस महीने 84.5 किग्रा CO₂ उत्सर्जन रोकने की राह पर है।'
+};
+
 export const CarbonImpactView: React.FC = () => {
   const { lang, telemetry } = useEnergy();
-  const [carbon, setCarbon] = useState<CarbonData | null>(null);
+  const [carbon, setCarbon] = useState<CarbonData>(DEFAULT_CARBON);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchCarbon = async () => {
       try {
         const res = await api.getCarbon();
-        if (res.success) {
+        if (res && res.success && isMounted) {
           setCarbon(res);
         }
       } catch (e) {
-        console.error(e);
+        console.warn('Using baseline carbon data:', e);
       }
     };
     fetchCarbon();
+    return () => { isMounted = false; };
   }, [telemetry]);
 
   return (
