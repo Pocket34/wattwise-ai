@@ -130,10 +130,33 @@ const DEFAULT_APPLIANCES: Appliance[] = [
   { id: 'app-desk', name: 'Workstation Setup', name_hi: 'वर्कस्टेशन सेटअप', category: 'electronics', room: 'Home Office', power_watts: 85, baseline_watts: 85, standby_watts: 10, is_on: 1, daily_hours: 8, is_priority: 0, schedule_start: '', schedule_end: '', schedule_enabled: 0, efficiency_rating: '5 Star', temp_setpoint: 0, vampire_active: 0, icon: '💻' }
 ];
 
+const getInitialNavSection = (): NavSection => {
+  if (typeof window !== 'undefined') {
+    const p = window.location.pathname.replace(/\/+$/, '') || '/';
+    const map: Record<string, NavSection> = {
+      '/': 'home',
+      '/home': 'home',
+      '/pulse': 'pulse',
+      '/appliances': 'appliances',
+      '/bridge': 'bridge',
+      '/leaks': 'leaks',
+      '/what-if': 'what-if',
+      '/rules': 'rules',
+      '/forecast': 'forecast',
+      '/carbon': 'carbon',
+      '/goals': 'goals',
+      '/insights': 'insights',
+      '/settings': 'settings'
+    };
+    if (map[p]) return map[p];
+  }
+  return 'home';
+};
+
 const EnergyContext = createContext<EnergyContextType | null>(null);
 
 export const EnergyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [navSection, setNavSectionState] = useState<NavSection>('home');
+  const [navSection, setNavSectionState] = useState<NavSection>(getInitialNavSection);
   const [telemetry, setTelemetry] = useState<Telemetry | null>(DEFAULT_TELEMETRY);
   const [appliances, setAppliances] = useState<Appliance[]>(DEFAULT_APPLIANCES);
   const [leaks, setLeaks] = useState<Leak[]>([]);

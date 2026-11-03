@@ -58,6 +58,10 @@ function AppContent() {
             <Route path="/whatif" element={<WhatIfLab />} />
             <Route path="/rules" element={<SmartRules />} />
             <Route path="/bill" element={<BillForecast />} />
+            <Route path="/forecast" element={<BillForecast />} />
+            <Route path="/pulse" element={<EnergyPulse />} />
+            <Route path="/what-if" element={<WhatIfLab />} />
+            <Route path="/carbon-impact" element={<CarbonImpact />} />
             <Route path="/carbon" element={<CarbonImpact />} />
             <Route path="/goals" element={<EnergyGoals />} />
             <Route path="/insights" element={<Insights />} />

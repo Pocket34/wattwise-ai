@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "WattWise AI — Adaptive Smart Home Energy Intelligence Companion",
   "scripts": {
+    "build": "npm --prefix client run build",
     "server": "npm --prefix server start",
     "client": "npm --prefix client run dev",
     "build:client": "npm --prefix client run build",

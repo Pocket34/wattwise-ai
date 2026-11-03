@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { EnergyProvider, useEnergy } from './context/EnergyContext';
 import { NavSection } from './types';
@@ -62,6 +62,8 @@ const DashboardContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isFirstMount = useRef(true);
+
   // Keep route pathname and navSection synchronized
   useEffect(() => {
     const matchedSection = PATH_TO_SECTION[location.pathname];
@@ -70,7 +72,12 @@ const DashboardContent: React.FC = () => {
     }
   }, [location.pathname]);
 
+  // Navigate only when user interaction updates navSection
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     const targetPath = SECTION_TO_PATH[navSection];
     if (targetPath && location.pathname !== targetPath && !(targetPath === '/' && location.pathname === '/home')) {
       navigate(targetPath);
